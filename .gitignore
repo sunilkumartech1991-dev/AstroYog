@@ -88,3 +88,6 @@ celerybeat.pid
 
 # Redis
 dump.rdb
+
+# Claude Code
+.claude/
