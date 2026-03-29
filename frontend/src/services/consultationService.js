@@ -27,6 +27,14 @@ export const consultationService = {
 
   // Submit feedback
   submitFeedback: (data) => api.post('/consultations/feedback/', data),
+
+  // Get messages for a consultation
+  getMessages: (consultationId) =>
+    api.get(`/consultations/${consultationId}/messages/`),
+
+  // Send a message
+  sendMessage: (consultationId, data) =>
+    api.post(`/consultations/${consultationId}/messages/`, data),
 }
 
 export default consultationService

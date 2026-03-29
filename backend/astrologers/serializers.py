@@ -34,13 +34,25 @@ class AstrologerAvailabilitySerializer(serializers.ModelSerializer):
 class AstrologerReviewSerializer(serializers.ModelSerializer):
     """Serializer for astrologer reviews"""
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
-    user_profile_image = serializers.ImageField(source='user.profile_image', read_only=True)
+    user_profile_image = serializers.SerializerMethodField()
 
     class Meta:
         model = AstrologerReview
         fields = ['id', 'user', 'user_name', 'user_profile_image', 'rating',
                   'review_text', 'is_featured', 'created_at']
         read_only_fields = ['user', 'created_at']
+
+    def get_user_profile_image(self, obj):
+        """Return profile image URL - handle both local files and external URLs"""
+        if obj.user.profile_image:
+            # If it's a string starting with http, return as-is (external URL)
+            if str(obj.user.profile_image).startswith('http'):
+                return str(obj.user.profile_image)
+            # Otherwise, build the full URL for local files
+            request = self.context.get('request')
+            if request and hasattr(obj.user.profile_image, 'url'):
+                return request.build_absolute_uri(obj.user.profile_image.url)
+        return None
 
 
 class AstrologerProfileSerializer(serializers.ModelSerializer):
@@ -62,7 +74,7 @@ class AstrologerProfileSerializer(serializers.ModelSerializer):
 class AstrologerListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for astrologer listings"""
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
-    user_profile_image = serializers.ImageField(source='user.profile_image', read_only=True)
+    user_profile_image = serializers.SerializerMethodField()
     specializations = serializers.SerializerMethodField()
 
     class Meta:
@@ -72,6 +84,18 @@ class AstrologerListSerializer(serializers.ModelSerializer):
                   'video_price', 'is_available', 'availability_status',
                   'total_consultations', 'average_rating', 'total_reviews',
                   'is_featured', 'is_top_rated', 'specializations']
+
+    def get_user_profile_image(self, obj):
+        """Return profile image URL - handle both local files and external URLs"""
+        if obj.user.profile_image:
+            # If it's a string starting with http, return as-is (external URL)
+            if str(obj.user.profile_image).startswith('http'):
+                return str(obj.user.profile_image)
+            # Otherwise, build the full URL for local files
+            request = self.context.get('request')
+            if request and hasattr(obj.user.profile_image, 'url'):
+                return request.build_absolute_uri(obj.user.profile_image.url)
+        return None
 
     def get_specializations(self, obj):
         return [s.specialization.name for s in obj.specializations.all()[:5]]

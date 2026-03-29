@@ -7,10 +7,12 @@ from agora_token_builder import RtcTokenBuilder
 import time
 import uuid
 from django.conf import settings
+from decimal import Decimal
 
 from .models import Consultation, ChatMessage, Booking, ConsultationFeedback
 from astrologers.models import AstrologerProfile
 from users.models import Wallet
+from notifications.models import Notification
 from .serializers import (
     ConsultationSerializer, ConsultationListSerializer, ChatMessageSerializer,
     StartConsultationSerializer, BookingSerializer, ConsultationFeedbackSerializer
@@ -85,6 +87,16 @@ class StartConsultationView(APIView):
                 consultation.agora_token = token
                 consultation.save(update_fields=['channel_name', 'agora_token'])
 
+        # Send notification to astrologer
+        Notification.objects.create(
+            user=astrologer.user,
+            notification_type='consultation_request',
+            title='New Consultation Request',
+            message=f'{request.user.username} wants to consult via {consultation.get_consultation_type_display()}',
+            related_id=consultation.id,
+            related_type='consultation'
+        )
+
         return Response({
             "consultation": ConsultationSerializer(consultation).data,
             "message": "Consultation request sent to astrologer"
@@ -113,6 +125,16 @@ class AcceptConsultationView(APIView):
         consultation.status = 'accepted'
         consultation.started_at = timezone.now()
         consultation.save(update_fields=['status', 'started_at'])
+
+        # Send notification to user
+        Notification.objects.create(
+            user=consultation.user,
+            notification_type='consultation_accepted',
+            title='Consultation Accepted',
+            message=f'{consultation.astrologer.display_name} has accepted your consultation request',
+            related_id=consultation.id,
+            related_type='consultation'
+        )
 
         return Response({
             "consultation": ConsultationSerializer(consultation).data,
@@ -163,7 +185,8 @@ class EndConsultationView(APIView):
         )
 
         # Calculate platform commission
-        platform_commission = consultation.total_amount * (settings.PLATFORM_COMMISSION / 100)
+        commission_rate = Decimal(str(settings.PLATFORM_COMMISSION)) / Decimal('100')
+        platform_commission = consultation.total_amount * commission_rate
         astrologer_earning = consultation.total_amount - platform_commission
 
         # Update astrologer earnings
@@ -173,6 +196,41 @@ class EndConsultationView(APIView):
         astrologer.total_earnings += astrologer_earning
         astrologer.pending_earnings += astrologer_earning
         astrologer.save(update_fields=['total_consultations', 'total_minutes', 'total_earnings', 'pending_earnings'])
+
+        # Add to astrologer wallet
+        astrologer_user = astrologer.user
+        astrologer_user.wallet_balance += astrologer_earning
+        astrologer_user.save(update_fields=['wallet_balance'])
+
+        # Create astrologer wallet transaction
+        Wallet.objects.create(
+            user=astrologer_user,
+            transaction_type='credit',
+            amount=astrologer_earning,
+            balance_after=astrologer_user.wallet_balance,
+            status='success',
+            description=f'{consultation.get_consultation_type_display()} consultation with {consultation.user.username}',
+            reference_id=f'CONSULT_EARN_{consultation.id}'
+        )
+
+        # Send notifications to both user and astrologer
+        Notification.objects.create(
+            user=consultation.user,
+            notification_type='consultation_completed',
+            title='Consultation Completed',
+            message=f'Your consultation with {consultation.astrologer.display_name} has ended. Total: ₹{consultation.total_amount}',
+            related_id=consultation.id,
+            related_type='consultation'
+        )
+
+        Notification.objects.create(
+            user=consultation.astrologer.user,
+            notification_type='consultation_completed',
+            title='Consultation Completed',
+            message=f'Consultation with {consultation.user.username} completed. You earned: ₹{astrologer_earning:.2f}',
+            related_id=consultation.id,
+            related_type='consultation'
+        )
 
         return Response({
             "consultation": ConsultationSerializer(consultation).data,
@@ -187,12 +245,19 @@ class ConsultationListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        # Optimize queries with select_related to avoid N+1 problem
+        base_query = Consultation.objects.select_related(
+            'user',
+            'astrologer',
+            'astrologer__user'
+        ).order_by('-created_at')
+
         if hasattr(user, 'astrologer_profile'):
             # Astrologer view
-            return Consultation.objects.filter(astrologer__user=user)
+            return base_query.filter(astrologer__user=user)
         else:
             # User view
-            return Consultation.objects.filter(user=user)
+            return base_query.filter(user=user)
 
 
 class ConsultationDetailView(generics.RetrieveAPIView):
@@ -242,3 +307,45 @@ class ConsultationFeedbackView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class ChatMessageListView(generics.ListCreateAPIView):
+    """List and create chat messages for a consultation"""
+    serializer_class = ChatMessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        consultation_id = self.kwargs['consultation_id']
+        user = self.request.user
+
+        # Verify user has access to this consultation
+        consultation = Consultation.objects.filter(
+            Q(id=consultation_id),
+            Q(user=user) | Q(astrologer__user=user)
+        ).first()
+
+        if not consultation:
+            return ChatMessage.objects.none()
+
+        # Optimize with select_related for sender relationship
+        return ChatMessage.objects.filter(
+            consultation_id=consultation_id
+        ).select_related('sender').order_by('created_at')
+
+    def perform_create(self, serializer):
+        consultation_id = self.kwargs['consultation_id']
+        user = self.request.user
+
+        # Verify consultation exists and user has access
+        consultation = Consultation.objects.filter(
+            Q(id=consultation_id),
+            Q(user=user) | Q(astrologer__user=user)
+        ).first()
+
+        if not consultation:
+            raise Response({"error": "Consultation not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer.save(
+            consultation=consultation,
+            sender=user
+        )

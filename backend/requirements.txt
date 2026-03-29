@@ -21,11 +21,11 @@ celery==5.3.4
 redis==5.0.1
 
 # Payment Gateway
-payu-python==0.1.0
+# PayU integration is manual - no official package
 razorpay==1.4.1
 
 # Astrology Calculations
-swisseph==2.10.3.2
+# pyswisseph==2.10.3.2  # Requires Visual C++ Build Tools - install separately if needed
 pytz==2023.3
 ephem==4.1.5
 
@@ -45,9 +45,6 @@ requests==2.31.0
 
 # Email
 django-ses==3.5.2
-
-# SMS
-twilio==8.10.0
 
 # File Upload
 django-storages==1.14.2

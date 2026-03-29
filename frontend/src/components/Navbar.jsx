@@ -34,6 +34,9 @@ const Navbar = () => {
                 <Link to="/dashboard" className="hover:text-primary-200">
                   Dashboard
                 </Link>
+                <Link to="/consultations" className="hover:text-primary-200">
+                  My Consultations
+                </Link>
                 <Link to="/wallet" className="hover:text-primary-200">
                   Wallet: ₹{user.wallet_balance}
                 </Link>

@@ -16,6 +16,7 @@ import Wallet from './pages/Wallet'
 import Bookings from './pages/Bookings'
 import Kundli from './pages/Kundli'
 import DailyHoroscope from './pages/DailyHoroscope'
+import Consultations from './pages/Consultations'
 
 // Layout
 import Navbar from './components/Navbar'
@@ -39,6 +40,7 @@ function App() {
 
               {/* Private Routes */}
               <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/consultations" element={<PrivateRoute><Consultations /></PrivateRoute>} />
               <Route path="/chat/:consultationId" element={<PrivateRoute><ChatConsultation /></PrivateRoute>} />
               <Route path="/wallet" element={<PrivateRoute><Wallet /></PrivateRoute>} />
               <Route path="/bookings" element={<PrivateRoute><Bookings /></PrivateRoute>} />

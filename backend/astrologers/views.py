@@ -180,7 +180,7 @@ class AstrologerAvailabilityView(generics.ListCreateAPIView):
 
 
 class FeaturedAstrologersView(generics.ListAPIView):
-    """Get featured/top-rated astrologers"""
+    """Get featured/top-rated astrologers (only online/available)"""
     serializer_class = AstrologerListSerializer
     permission_classes = [permissions.AllowAny]
 
@@ -188,5 +188,6 @@ class FeaturedAstrologersView(generics.ListAPIView):
         return AstrologerProfile.objects.filter(
             verification_status='approved',
             user__is_active=True,
-            is_featured=True
+            is_featured=True,
+            is_available=True  # Only show online astrologers
         ).select_related('user').prefetch_related('specializations__specialization')[:10]

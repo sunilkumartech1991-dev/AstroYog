@@ -20,9 +20,12 @@ const AstrologerList = () => {
   const fetchSpecializations = async () => {
     try {
       const response = await astrologerService.getSpecializations()
-      setSpecializations(response.data)
+      // Ensure we always have an array
+      const data = response.data
+      setSpecializations(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching specializations:', error)
+      setSpecializations([])
     }
   }
 
@@ -35,9 +38,12 @@ const AstrologerList = () => {
       if (filters.language) params.language = filters.language
 
       const response = await astrologerService.getAstrologers(params)
-      setAstrologers(response.data.results || response.data)
+      // Ensure we always have an array
+      const data = response.data.results || response.data
+      setAstrologers(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching astrologers:', error)
+      setAstrologers([])
     } finally {
       setLoading(false)
     }
@@ -86,6 +92,11 @@ const AstrologerList = () => {
       {/* Astrologer Grid */}
       {loading ? (
         <div className="text-center py-12">Loading...</div>
+      ) : astrologers.length === 0 ? (
+        <div className="text-center text-gray-500 py-12">
+          <p className="text-xl mb-4">No astrologers found.</p>
+          <p className="text-sm">Try adjusting your filters or check back later.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {astrologers.map((astrologer) => (

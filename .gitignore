@@ -91,3 +91,6 @@ dump.rdb
 
 # Claude Code
 .claude/
+
+# Session summaries (may contain sensitive info)
+*SESSION_SUMMARY.md

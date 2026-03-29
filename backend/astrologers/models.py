@@ -35,7 +35,7 @@ class AstrologerProfile(models.Model):
 
     # Pricing (per minute in INR)
     chat_price = models.DecimalField(max_digits=6, decimal_places=2, default=10.00)
-    call_price = models.DecimalField(max_digits=6, decimal_places=2, default=20.00)
+    call_price = models.DecimalField(max_digits=6, decimal_places=2, default=15.00)
     video_price = models.DecimalField(max_digits=6, decimal_places=2, default=30.00)
 
     # Availability

@@ -1,7 +1,23 @@
 """
 Kundli/Birth Chart Calculator using Swiss Ephemeris
 """
-import swisseph as swe
+try:
+    import swisseph as swe
+    SWISSEPH_AVAILABLE = True
+except ImportError:
+    SWISSEPH_AVAILABLE = False
+    # Define placeholder constants when swisseph is not available
+    class swe:
+        SUN = 0
+        MOON = 1
+        MERCURY = 2
+        VENUS = 3
+        MARS = 4
+        JUPITER = 5
+        SATURN = 6
+        TRUE_NODE = 11
+        SIDM_LAHIRI = 1  # Placeholder for Lahiri ayanamsa mode
+
 from datetime import datetime
 import pytz
 
@@ -42,6 +58,13 @@ class KundliCalculator:
         :param longitude: Longitude of birth place
         :param timezone_str: Timezone string
         """
+        if not SWISSEPH_AVAILABLE:
+            raise ImportError(
+                "Swiss Ephemeris library (pyswisseph) is not installed. "
+                "Install it with: pip install pyswisseph "
+                "(Note: Requires Microsoft Visual C++ Build Tools on Windows)"
+            )
+
         self.date_of_birth = date_of_birth
         self.time_of_birth = time_of_birth
         self.latitude = float(latitude)

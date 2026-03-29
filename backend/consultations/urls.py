@@ -3,7 +3,7 @@ from .views import (
     StartConsultationView, AcceptConsultationView, EndConsultationView,
     ConsultationListView, ConsultationDetailView,
     BookingListCreateView, BookingDetailView,
-    ConsultationFeedbackView
+    ConsultationFeedbackView, ChatMessageListView
 )
 
 urlpatterns = [
@@ -11,6 +11,7 @@ urlpatterns = [
     path('start/', StartConsultationView.as_view(), name='start-consultation'),
     path('<int:consultation_id>/accept/', AcceptConsultationView.as_view(), name='accept-consultation'),
     path('<int:consultation_id>/end/', EndConsultationView.as_view(), name='end-consultation'),
+    path('<int:consultation_id>/messages/', ChatMessageListView.as_view(), name='chat-messages'),
     path('', ConsultationListView.as_view(), name='consultation-list'),
     path('<int:pk>/', ConsultationDetailView.as_view(), name='consultation-detail'),
 
